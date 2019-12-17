@@ -1,9 +1,37 @@
 <?php
-//SETTINGS
+
+//            _   _   _                 
+//           | | | | (_)                
+//  ___  ___| |_| |_ _ _ __   __ _ ___ 
+// / __|/ _ \ __| __| | '_ \ / _` / __|
+// \__ \  __/ |_| |_| | | | | (_| \__ \
+// |___/\___|\__|\__|_|_| |_|\__, |___/
+//                            __/ |    
+//                           |___/     
+
 $urlChoices = array("http://webservies.be/chat/api", "http://localhost:5000/chatapi");
 $listeningUrl = $urlChoices[1]; //Kies op welke service je wilt testen. 1 = testing, 0 = production
 
+//                _ 
+//               (_)
+//    __ _ _ __  _ 
+//   / _` | '_ \| |
+//  | (_| | |_) | |
+//  \__,_| .__/|_|
+//       | |      
+//      |_|      
+
+/**
+ * This function calls the API with a certain method, url and optional data
+ * 
+ * @param string $method The method used to call the API (GET or POST)
+ * @param string $url The url you want to call the API on, all possible options: /Channels | /Channels/{id} | /Channels/{id}/messages | /Users | /Users{id}
+ * @param mixed $data If doing a POST call, this should be your dataArray, if using GET just use false;
+ * 
+ * @return string Result of query in JSON format
+ */
 function callAPI($method, $url, $data) {
+    global $listeningUrl;
     $curl = curl_init();
     switch($method) {
         case "POST":
@@ -18,95 +46,154 @@ function callAPI($method, $url, $data) {
         break;
         default:
             if($data) {
-                $url = sprintf("%s?%s", $url, http_build_query($data));
+                $url = sprintf("%s?%s", $listeningUrl . $url, http_build_query($data));
             }
         break;
     }
-    curl_setopt($curl, CURLOPT_URL, $url);
+    curl_setopt($curl, CURLOPT_URL, $listeningUrl . $url);
     curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
     $result = curl_exec($curl);
     if(curl_errno($curl)) {
         echo curl_error($curl);
     }
     if(!$result) {
-        die("Connection failure");
+        echo "No result from API call";
     }
     curl_close($curl);
     return $result;
 }
-function getUsersList() {
-    $usersList = array();
-    $users = json_decode(callAPI("GET", $GLOBALS['listeningUrl'] . "/Users", false), 1);
-    foreach($users as $u) {
-        $usersList[$u["key"]] = $u["name"];
+
+//                _   
+//               | |  
+//      __ _  ___| |_ 
+//    / _` |/ _ \ __|
+//   | (_| |  __/ |_ 
+//   \__, |\___|\__|
+//   __/ |         
+//  |___/          
+
+/**
+ * This function returns the channels as Key => Value pair, key being channelID and value being channelName
+ * 
+ * @return array Array of channels as Key => Value. Key being channelID and value being channelName
+ */
+function getChannels() {
+    $channels = json_decode(callAPI("GET", "/Channels", false), 1);
+    return $channels;
+}
+/**
+ * This function returns given channel as Key => Value pair, key being channelID and value being channelName
+ * 
+ * @param int $channelID This is the ID of the channel you want information about
+ * 
+ * @return array Information about the channel in a Key => Value array
+ */
+function getChannelInformation($channelID) {
+    $channelInformation = json_decode(callAPI("GET", "/Channels/$channelID", false), 1);
+    return $channelInformation;
+}
+/**
+ * This function returns messages in given channel as an array which contains arrays of user information.
+ * array[0] = userID
+ * array[1] = creationDate
+ * array[2] = messageText
+ * 
+ * @param int $channelID This is the ID of the channel you want the messages from
+ * 
+ * @return array An array containing arrays of message information
+ */
+function getMessages($channelID) {
+    $messages = json_decode(callAPI("GET", "/Channels/$channelID/messages", false), 1);
+    return $messages;
+}
+/**
+ * This function returns users as an array containing Key => Value pairs.
+ * 
+ * @return array Array containing arrays of user information
+ */
+function getUsers() {
+    $users = json_decode(callAPI("GET", "/Users", false), 1);
+    return $users;
+}
+/**
+ * This function returns information of given userID as a Key => Value array.
+ * array[0] = userID
+ * array[1] = userName
+ * 
+ * @param int $userID This is the ID of the user you want information about
+ * 
+ * @return array An array with one key => value pair. 
+ */
+function getUserInformation($userID) {
+    $userInfo = json_decode(callAPI("GET", "/Users/$userID", false), 1);
+    return $userInfo;
+}
+
+//                   _   
+//                  | |  
+//     __   ___  ___| |_ 
+//  | '_ \ / _ \/ __| __|
+//  | |_) | (_) \__ \ |_ 
+//  | .__/ \___/|___/\__|
+//  | |                  
+//  |_|                  
+//TODO: ADD DOCUMENTATION FOR POST FUNCTIONS
+function makeChannel($channelName) {
+    if(!in_array($channelName, getChannels(), false)) {
+        $dataArray = array(
+            "key" => (max(array_keys(getChannels())) + 1),
+            "name" => $channelName
+        );
+        callAPI("POST", "/Channels", json_encode($dataArray));
+    } else {
+        echo "A channel already exists with this name, please choose a different one";
     }
-    return $usersList;
 }
-function getUserInfo() {
-    $info = json_decode(callAPI("GET", $GLOBALS['listeningUrl'] . "/Users/" . $_SESSION["User"], false), 1);
-    return $info;
+function createMessage($channelID, $userID, $message) {
+    if($message) {
+        $now = date("Y-m-d H:i:s");
+        $dataArray = array(
+            "user" => $userID,
+            "creationDate" => $now,
+            "text" => $message
+        );
+        callAPI("POST", "/Channels/$channelID/messages", $dataArray);
+    }   
 }
-function getUsername($id) {
-    $info = json_decode(callAPI("GET", $GLOBALS['listeningUrl'] . "/Users/$id", false), 1);
-    return $info["name"];
-}
-function generateUsersList($usersList) {
-    foreach($usersList as $key => $name) {
-        echo "<div class='user'>$name</div>";
+function createUser($userName, $locationAfterRegister) {
+    if(!in_array($userName, getUsers(), false)) {
+        $dataArray = array(
+            "key" => (max(array_keys(getUsers())) + 1),
+            "name" => $userName
+        );
+        callAPI("POST", "/Users", json_encode($dataArray));
+        header("Location: $locationAfterRegister");
+    } else {
+        echo "Username already taken";
     }
 }
-function generateUsersSelect($usersList) {
-    foreach($usersList as $key => $name) {
-        echo "<option value='" . $key . "'>" . $name . "</option>";
-    }
-}
-function getChannelName($id) {
-    $channelName = json_decode(callAPI("GET", $GLOBALS['listeningUrl'] . "/Channels/$id", false), 1);
-    return $channelName["name"];
-}
-function getChannelsList() {
-    $channels = json_decode(callAPI("GET", $GLOBALS['listeningUrl'] . "/Channels", false), 1);
-    foreach($channels as $c) {
-        echo "<a href='?cid=" . $c["key"] . "'>". $c["name"] ."</a><br />";
-    }
-}
-function getMessages($cid) {
-    $messages = json_decode(callAPI("GET", $GLOBALS['listeningUrl'] . "/Channels/$cid/messages", false), 1);
-    foreach($messages as $message) {
-        echo "<hr /><div class='message'><span class='time'>" . $message['creationDate'] . "</span><br /> " . getUsername($message["user"]) . " said: " . $message['text'] . "</div>";
+
+// OTHER
+//TODO: ADD DOCUMENTATION FOR OTHER FUNCTIONS
+function logIn($userID) {
+    if(array_key_exists($userID, getUsers())) {
+        $_SESSION["userID"] = $_POST["userID"];
+    } else {
+        echo "Invalid userID parameter on logIn function";
     }
 }
 function isLoggedIn() {
-    if(isset($_SESSION["User"])) {
+    if(isset($_SESSION["userID"])) {
         return true;
     } else {
         return false;
     }
 }
-function logOut($redirLocation) {
+function logOut($locationAfterLogout) {
     session_unset();
     session_destroy();
-    header('Location: ' . $redirLocation);
+    header("Location: $locationAfterLogout");
 }
-function register($userName, $redirLocation) {
-    $dataArray = array(
-        "key" => (max(array_keys(getUsersList())) + 1),
-        "name" => $userName
-    );
-    if(!array_key_exists($userName, getUsersList())) {
-        $response = json_decode(callAPI("POST", $GLOBALS['listeningUrl'] . "/Users", json_encode($dataArray)), 1);
-        header('Location: ' . $redirLocation);
-    } else {
-        echo "Username already taken";
-    }
-}
-function sendMessage($cid, $user, $message) {
-    $now = date("Y-m-d H:i:s");
-    $dataArray = array(
-        "user" => $user,
-        "creationDate" => $now,
-        "text" => $message
-    );
-    $response = json_decode(callAPI("POST", $GLOBALS['listeningUrl'] . "/Channels/$cid/messages", json_encode($dataArray)), 1);
-}
+
+
 ?>

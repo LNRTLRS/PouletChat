@@ -19,7 +19,7 @@ if(isLoggedIn()) {
             <div class="login">
                 <form action="chat.php" method="post">
                     User: 
-                    <select name="User">
+                    <select name="userID">
                         <?php generateUsersSelect(getUsersList()); ?>
                     </select><br />
                     <input type="submit" value="Log in">

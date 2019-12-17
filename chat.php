@@ -15,8 +15,8 @@ if(isset($_GET["cid"])) {
 if(isset($_GET["logout"])) {
     logOut("index.php");
 }
-if(isset($_POST["User"])) {
-    $_SESSION["User"] = $_POST["User"];
+if(isset($_POST["userID"])) {
+    $_SESSION["userID"] = $_POST["userID"];
 }
 if(!isLoggedIn()) {
     header("Location: index.php");
