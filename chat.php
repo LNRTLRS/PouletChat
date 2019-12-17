@@ -1,6 +1,25 @@
 <?php 
-include_once("assets/php/functions.php"); 
 session_start();
+include_once("assets/php/functions.php"); 
+function getUsersList() {
+    foreach(getUsers() as $user) {
+        echo "<div class='user'>" . $user['name'] . "</div>";
+    }
+}
+function getChannelsList() {
+    foreach(getChannels() as $channel) {
+        echo "<a href='?cid=" . $channel['key'] . "'>" . $channel['name'] . "</a><br />";
+    }
+}
+function generateMessages() {
+    if(getMessages($_SESSION['currentChannel'])) {
+        foreach(getMessages($_SESSION['currentChannel']) as $message) {
+            echo "<hr /><div class='message'><span class='time'>" . $message['creationDate'] . "</span><br />" . getUserInformation($message['user'])['name'] . " said: " . $message['text'] . "</div>";
+        }
+    } else {
+        echo "Nothing to see here... Yet.";
+    }
+}
 if(!isset($_SESSION["currentChannel"])) {
     $_SESSION["currentChannel"] = 1; 
 }
@@ -22,7 +41,7 @@ if(!isLoggedIn()) {
     header("Location: index.php");
 }
 if(isset($_POST["Message"])) {
-    sendMessage($_SESSION["currentChannel"], $_SESSION["User"], $_POST["Message"]);
+    createMessage($_SESSION["currentChannel"], $_SESSION["User"], $_POST["Message"]);
     header("Location: " . $_SERVER['PHP_SELF']);
 }
 ?>
@@ -52,11 +71,11 @@ if(isset($_POST["Message"])) {
                         <a href="?logout=true">Log out</a><br />
                     </div>
                 </div></a>
-                <div class="channelName"><?php echo getChannelName($_SESSION['currentChannel']); ?></div>
+                <div class="channelName"><?php echo getChannelInformation($_SESSION['currentChannel'])['name']; ?></div>
             </nav>
             <div class="chatContent">
                 <div class="users">
-                    <?php generateUsersList(getUsersList()); ?>
+                    <?php getUsersList(); ?>
                     <div class="online">
                     </div>
                     <div class="offline">
@@ -64,7 +83,7 @@ if(isset($_POST["Message"])) {
                 </div>
                 <div class="chat">
                     <div class="messages" id="messages">
-                        <?php getMessages($_SESSION['currentChannel']); ?>
+                        <?php generateMessages(); ?>
                         <div id="newestMessage"></div>
                     </div>
                     <div class="messageInput">

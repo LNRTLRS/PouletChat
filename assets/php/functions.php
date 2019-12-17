@@ -57,7 +57,7 @@ function callAPI($method, $url, $data) {
         echo curl_error($curl);
     }
     if(!$result) {
-        echo "No result from API call";
+        echo "No result from API call<br />";
     }
     curl_close($curl);
     return $result;
@@ -108,6 +108,7 @@ function getMessages($channelID) {
 }
 /**
  * This function returns users as an array containing Key => Value pairs.
+ * So, the returned value is an array, wherein each item is an array containing the Key => Value where key = userID and value = userName
  * 
  * @return array Array containing arrays of user information
  */

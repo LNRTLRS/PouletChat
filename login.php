@@ -1,5 +1,10 @@
 <?php 
 include_once("assets/php/functions.php");
+function generateUsersSelect() {
+    foreach(getUsers() as $user) {
+        echo "<option value='" . $user['key'] . "'>" . $user['name'] . " </option>";
+    }
+}
 session_start(); 
 if(isLoggedIn()) {
     header("Location: chat.php");
@@ -18,9 +23,9 @@ if(isLoggedIn()) {
         <div class="content">
             <div class="login">
                 <form action="chat.php" method="post">
-                    User: 
+                    User:
                     <select name="userID">
-                        <?php generateUsersSelect(getUsersList()); ?>
+                        <?php generateUsersSelect(); ?>
                     </select><br />
                     <input type="submit" value="Log in">
                 </form>
