@@ -9,8 +9,8 @@
 //                            __/ |    
 //                           |___/     
 
-$urlChoices = array("http://webservies.be/chat/api", "http://localhost:5000/chatapi");
-$listeningUrl = $urlChoices[1]; //Kies op welke service je wilt testen. 1 = testing, 0 = production
+$urlChoices = array("http://webservies.be/chat/api", "http://localhost:5000/chatapi", "http://localhost:5000/api");
+$listeningUrl = $urlChoices[2]; //Kies op welke service je wilt testen. 2 = Eigen API, 1 = testing, 0 = production
 
 //                _ 
 //               (_)
@@ -39,8 +39,7 @@ function callAPI($method, $url, $data) {
             if($data) {
                 curl_setopt($curl, CURLOPT_POSTFIELDS, $data);
                 curl_setopt($curl, CURLOPT_HTTPHEADER, array(
-                    'Content-Type: application/json',
-                    'Content-Length: ' . strlen($data)
+                    'Content-Type: application/json'
                 ));
             }
         break;
@@ -57,10 +56,28 @@ function callAPI($method, $url, $data) {
         echo curl_error($curl);
     }
     if(!$result) {
-        echo "No result from API call<br />";
+        //echo "No result from API call<br />";
     }
     curl_close($curl);
     return $result;
+}
+
+function testBackend($fromError) {
+    global $listeningUrl;
+    $curl = curl_init();
+    curl_setopt($curl, CURLOPT_URL, $listeningUrl . "/Users");
+    curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 3);
+    $result = curl_exec($curl);
+    $uri = $_SERVER['REQUEST_URI'];
+    if(curl_getinfo($curl, CURLINFO_HTTP_CODE) == 0) {
+        if(!($uri == "/PouletChat/startAPI.php")) {
+            header("Location: startAPI.php");
+            die;
+        }
+    } else {
+        return true;
+    }
 }
 
 //                _   
@@ -103,8 +120,13 @@ function getChannelInformation($channelID) {
  * @return array An array containing arrays of message information
  */
 function getMessages($channelID) {
-    $messages = json_decode(callAPI("GET", "/Channels/$channelID/messages", false), 1);
+    $messages = json_decode(callAPI("GET", "/Messages/Channel/$channelID", false), 1);
     return $messages;
+}
+function getAllMessages() {
+    $messages = json_decode(callAPI("GET", "/Messages", false), 1);
+    return $messages;
+  
 }
 /**
  * This function returns users as an array containing Key => Value pairs.
@@ -150,27 +172,53 @@ function makeChannel($channelName) {
         echo "A channel already exists with this name, please choose a different one";
     }
 }
-function createMessage($channelID, $userID, $message) {
-    if($message) {
+function createMessage($channelID, $userID, $messageCont) {
         $now = date("Y-m-d H:i:s");
+        $highestMID = 0;
+        foreach(getAllMessages() as $message) {
+            if($message["id"] >= $highestMID) {
+                $highestMID = $message["id"];
+            }
+        }
         $dataArray = array(
-            "user" => $userID,
-            "creationDate" => $now,
-            "text" => $message
+            "ID" => ($highestMID + 1),
+            "CreatorID" => $userID,
+            "ChannelID" => $channelID,
+            "MessageContent" => $messageCont,
+            "CreationDate" => $now
         );
-        callAPI("POST", "/Channels/$channelID/messages", $dataArray);
-    }   
+        callAPI("POST", "/Messages", json_encode($dataArray));
 }
-function createUser($userName, $locationAfterRegister) {
-    if(!in_array($userName, getUsers(), false)) {
-        $dataArray = array(
-            "key" => (max(array_keys(getUsers())) + 1),
-            "name" => $userName
-        );
-        callAPI("POST", "/Users", json_encode($dataArray));
-        header("Location: $locationAfterRegister");
-    } else {
-        echo "Username already taken";
+if($listeningUrl == $urlChoices[2]) {
+    function createUser($userName, $passWord, $locationAfterRegister) {
+            $highestUID = 0;
+            foreach(getUsers() as $user) {
+                if($user["id"] >= $highestUID) {
+                    $highestUID = $user["id"];
+                }
+            }
+            $dataArray = array(
+                "ID" => ($highestUID + 1),
+                "Username" => $userName,
+                "Password" => $passWord
+            );
+            $_SESSION["userID"] = ($highestUID + 1);
+            callAPI("POST", "/Users", json_encode($dataArray));
+            header("Location: $locationAfterRegister");
+    }
+} else {
+    function createUser($userName, $locationAfterRegister) {
+        if(!in_array($userName, getUsers(), false)) {
+            $dataArray = array(
+                "key" => (max(array_keys(getUsers())) + 2),
+                "name" => $userName
+            );
+            $_SESSION["userID"] = max(array_keys(getUsers())) + 2;
+            callAPI("POST", "/Users", json_encode($dataArray));
+            header("Location: $locationAfterRegister");
+        } else {
+            echo "Username already taken";
+        }
     }
 }
 

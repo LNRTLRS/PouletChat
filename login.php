@@ -2,7 +2,7 @@
 include_once("assets/php/functions.php");
 function generateUsersSelect() {
     foreach(getUsers() as $user) {
-        echo "<option value='" . $user['key'] . "'>" . $user['name'] . " </option>";
+        echo "<option value='" . $user['id'] . "'>" . $user['username'] . " </option>";
     }
 }
 session_start(); 
@@ -27,6 +27,12 @@ if(isLoggedIn()) {
                     <select name="userID">
                         <?php generateUsersSelect(); ?>
                     </select><br />
+                    Password: <input type="password" name="Password" /><br />
+                    <?php
+                    if(isset($_GET["e"])) {
+                        echo "<span id='errMsg'>Wrong password, please try again</span><br />";
+                    }
+                    ?>
                     <input type="submit" value="Log in">
                 </form>
                 <a href="index.php">Return to previous page</a>

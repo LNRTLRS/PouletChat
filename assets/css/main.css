@@ -163,3 +163,6 @@ nav {
     font-size: 0.75em;
     color: #bdc3c7;
 }
+#errMsg {
+    color: red;
+}

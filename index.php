@@ -1,6 +1,6 @@
 <?php 
 include_once("assets/php/functions.php");
-session_start(); 
+session_start();
 if(isLoggedIn()) {
     header("Location: chat.php");
 }

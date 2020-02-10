@@ -1,9 +1,6 @@
 <?php 
 include_once("assets/php/functions.php");
 session_start(); 
-if(testBackend()) {
-    header("Location: index.php");
-}
 if(isLoggedIn()) {
     header("Location: chat.php");
 }

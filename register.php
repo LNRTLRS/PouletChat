@@ -5,8 +5,11 @@ if(isLoggedIn()) {
     header("Location: chat.php");
 }
 if(isset($_POST["Username"])) {
-    register($_POST["Username"], "chat.php");
-    $_SESSION["User"] = $_POST["Username"];
+    if($listeningUrl == $urlChoices[2]) {
+        createUser($_POST["Username"], password_hash($_POST["Password"], PASSWORD_DEFAULT), "chat.php");
+    } else {
+        createUser($_POST["Username"], "chat.php");
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -22,7 +25,8 @@ if(isset($_POST["Username"])) {
         <div class="content">
             <div class="register">
                 <form action="register.php" method="post">
-                    Username: <input type="text" name="Username" />
+                    Username: <input type="text" name="Username" /><br />
+                    Password: <input type="password" name="Password" />
                     <input type="submit" value="Register">
                 </form>
                 <a href="index.php">Return to previous page</a>

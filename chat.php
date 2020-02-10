@@ -3,25 +3,25 @@ session_start();
 include_once("assets/php/functions.php"); 
 function getUsersList() {
     foreach(getUsers() as $user) {
-        echo "<div class='user'>" . $user['name'] . "</div>";
+        echo "<div class='user'>" . $user['username'] . "</div>";
     }
 }
 function getChannelsList() {
     foreach(getChannels() as $channel) {
-        echo "<a href='?cid=" . $channel['key'] . "'>" . $channel['name'] . "</a><br />";
-    }
-}
-function generateMessages() {
-    if(getMessages($_SESSION['currentChannel'])) {
-        foreach(getMessages($_SESSION['currentChannel']) as $message) {
-            echo "<hr /><div class='message'><span class='time'>" . $message['creationDate'] . "</span><br />" . getUserInformation($message['user'])['name'] . " said: " . $message['text'] . "</div>";
-        }
-    } else {
-        echo "Nothing to see here... Yet.";
+        echo "<a href='?cid=" . $channel['id'] . "'>" . $channel['channelName'] . "</a><br />";
     }
 }
 if(!isset($_SESSION["currentChannel"])) {
     $_SESSION["currentChannel"] = 1; 
+}
+function generateMessages() {
+    if(getMessages($_SESSION['currentChannel'])) {
+        foreach(getMessages($_SESSION['currentChannel']) as $message) {
+            echo "<hr /><div class='message'><span class='time'>" . $message['creationDate'] . "</span><br />" . getUserInformation($message['creatorID'])['username'] . " said: " . $message['messageContent'] . "</div>";
+        }
+    } else {
+        echo "Nothing to see here... Yet.";
+    }
 }
 if(isset($_GET)){
     foreach($_GET as $p => $v) {
@@ -34,15 +34,21 @@ if(isset($_GET["cid"])) {
 if(isset($_GET["logout"])) {
     logOut("index.php");
 }
-if(isset($_POST["userID"])) {
-    $_SESSION["userID"] = $_POST["userID"];
-}
-if(!isLoggedIn()) {
+if(isset($_POST["userID"]) && $_POST["Password"]) {
+    if(password_verify($_POST["Password"], getUserInformation($_POST["userID"])["password"])){
+        $_SESSION["userID"] = $_POST["userID"];
+    } else {
+        header("Location: login.php?e=pw");
+        exit;
+    }
+} else if(!isLoggedIn()) {
     header("Location: index.php");
 }
+//if(!isLoggedIn()) {
+//    header("Location: index.php");
+//}
 if(isset($_POST["Message"])) {
-    createMessage($_SESSION["currentChannel"], $_SESSION["User"], $_POST["Message"]);
-    header("Location: " . $_SERVER['PHP_SELF']);
+    createMessage($_SESSION["currentChannel"], $_SESSION["userID"], $_POST["Message"]);
 }
 ?>
 <!DOCTYPE html>
@@ -59,6 +65,24 @@ if(isset($_POST["Message"])) {
             var element = document.getElementById("messages");
             element.scrollTop = element.scrollHeight;
         }
+        function refreshMessages() {
+            $("#messages").load(location.href + " #messages>*", "");
+        }
+        $("#messageSendForm").submit(function(event) {
+            event.preventDefault();
+            var post_url = $(this).attr("action");
+            var request_method = $(this).attr("method");
+            var form_data = $(this).serialize();
+            $.ajax({
+                url: post_url,
+                type: request_method,
+                data: form_data,
+                success: function() {
+                    refreshMessages();
+                    scrollMessages();
+                }
+            })
+        })
         </script>
     </head>
     <body onload="scrollMessages()">
@@ -71,11 +95,12 @@ if(isset($_POST["Message"])) {
                         <a href="?logout=true">Log out</a><br />
                     </div>
                 </div></a>
-                <div class="channelName"><?php echo getChannelInformation($_SESSION['currentChannel'])['name']; ?></div>
+                <div class="channelName"><?php echo getChannelInformation($_SESSION['currentChannel'])['channelName']; ?></div>
             </nav>
             <div class="chatContent">
                 <div class="users">
-                    <?php getUsersList(); ?>
+                    <?php getUsersList(); 
+                    ?>
                     <div class="online">
                     </div>
                     <div class="offline">
